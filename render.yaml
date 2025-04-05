@@ -1,0 +1,9 @@
+services:
+  - type: web
+    name: code-executor
+    env: docker
+    plan: free
+    dockerfilePath: Dockerfile.executor
+    region: oregon  # or frankfurt, singapore, etc.
+    buildCommand: ""
+    startCommand: ""
