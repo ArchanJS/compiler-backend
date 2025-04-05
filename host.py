@@ -1,10 +1,13 @@
 from flask import Flask, request, jsonify
+from flask_cors import CORS
 import os
 import uuid
 import subprocess
 import datetime
 
 app = Flask(__name__)
+app = Flask(__name__)
+CORS(app)
 UPLOAD_DIR = "code_uploads"
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 
@@ -40,12 +43,10 @@ def compile_code():
 
     try:
         result = subprocess.run([
-            "docker", "run", "--rm",
-            "-v", f"{os.path.abspath(UPLOAD_DIR)}:/app/code_uploads",
-            "compiler_executor_image",
+            "python3", "executor.py", 
             lang,
-            f"code_uploads/{filename}"
-        ], input=user_input, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+            filepath
+        ], input=user_input, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, timeout=30)
 
         return jsonify({
             "success": True,
@@ -54,6 +55,15 @@ def compile_code():
             "language": lang,
             "version": version
         })
+
+    except subprocess.TimeoutExpired:
+        return jsonify({
+            "success": False,
+            "timestamp": datetime.datetime.utcnow().isoformat() + "Z",
+            "error": "Execution timed out",
+            "language": lang,
+            "version": version
+        }), 408
 
     except Exception as e:
         return jsonify({
@@ -69,4 +79,4 @@ def compile_code():
             os.remove(filepath)
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 8080)))
